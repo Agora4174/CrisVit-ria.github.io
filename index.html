@@ -57,14 +57,19 @@
         img {
             height: 100px;
             width: 100px;
-            margin-left:35%;
+            margin-left: 35%;
             margin-top: 11px;
         }
         footer {
-            margin-top: 20px;
+            background-color: #f1f1f1;
             text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -124,6 +129,7 @@
                         <th>Total</th>
                         <th>Data</th>
                         <th>Em haver</th>
+                        <th>Confirmação de Pagamento</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -138,7 +144,7 @@
 
     <footer>
         <p>© 2024 Registro de Vendas. Todos os direitos reservados.</p>
-        <p>AD Belém setor 21 Jardim Pereira</p>
+                   <p>AD Belém setor 21 Jardim Pereira<p>
     </footer>
 
     <script>
@@ -181,8 +187,7 @@
             item.data = new Date().toLocaleDateString(); // Adicionando a data
             let items = JSON.parse(localStorage.getItem('items')) || [];
             items.push(item);
-            localStorage.setItem('items', JSON
-.stringify(items));
+            localStorage.setItem('items', JSON.stringify(items));
 
             alert('Item cadastrado com sucesso!');
             novoCadastro();
@@ -208,9 +213,10 @@
                     <td>${item.total2Por10}</td>
                     <td>${item.total}</td>
                     <td>${item.data}</td>
-                    <td>${item.pagarDepois ? 'Em haver' : 'Confirmado'}</td>
+                    <td>${item.pagarDepois ? 'Em haver' : ''}</td>
+                    <td>${item.pagarDepois ? '' : 'Pagamento Confirmado'}</td>
                     <td>
-                        <button onclick="gerarPDF(${JSON.stringify(item)})">Gerar PDF</button>
+                        <button onclick="compartilharWhatsApp(${items.indexOf(item)})">Compartilhar</button>
                         <button onclick="removerItem(${items.indexOf(item)})">Apagar</button>
                     </td>
                 `;
@@ -218,8 +224,46 @@
             });
         }
 
+        async function gerarPDF(item) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.text("Registro de Venda", 20, 20);
+            doc.text(`Nome: ${item.nome}`, 20, 30);
+            doc.text(`Cantina: ${item.cantina}`, 20, 40);
+            doc.text(`Valor: ${item.valor}`, 20, 50);
+            doc.text(`Quantidade: ${item.quantidade}`, 20, 60);
+            doc.text(`2 por 10,00: ${item.total2Por10}`, 20, 70);
+            doc.text(`Total: ${item.total}`, 20, 80);
+            doc.text(`Data: ${item.data}`, 20, 90);
+            doc.text(`Em haver: ${item.pagarDepois ? 'Sim' : 'Não'}`, 20, 100);
+            doc.text(`Pagamento Confirmado: ${item.pagarDepois ? 'Não' : 'Sim'}`, 20, 110);
+
+            const pdfData = doc.output('blob');
+
+            return pdfData;
+        }
+
+        async function compartilharWhatsApp(index) {
+            const items = JSON.parse(localStorage.getItem('items')) || [];
+            const item = items[index];
+
+            const pdfData = await gerarPDF(item);
+            const pdfUrl = URL.createObjectURL(pdfData);
+
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            link.download = `${item.nome}_venda.pdf`;
+            link.click();
+
+            const whatsappMessage = `Confira a venda do item ${item.nome}: `;
+            const whatsappUrl = `https://send?text=${encodeURIComponent()}&attachment=${encodeURIComponent(pdfUrl)}`;
+
+            window.open(whatsappUrl, '_blank');
+        }
+
         function removerItem(index) {
-            let items = JSON.parse(localStorage.getItem('items'))
+            let items = JSON.parse(localStorage.getItem('items')) || [];
             items.splice(index, 1);
             localStorage.setItem('items', JSON.stringify(items));
             carregarItens();
@@ -233,45 +277,35 @@
         function filtrarItens() {
             const nomeFiltro = document.getElementById('nomeFiltro').value.toLowerCase();
             const dataFiltro = document.getElementById('dataFiltro').value;
-
             const items = JSON.parse(localStorage.getItem('items')) || [];
-
             const tbody = document.getElementById('consultaTable').querySelector('tbody');
             tbody.innerHTML = '';
 
-            items.forEach(item => {
-                if (item.nome.toLowerCase().includes(nomeFiltro) && (!dataFiltro || item.data === dataFiltro)) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${item.nome}</td>
-                        <td>${item.cantina}</td>
-                        <td>${item.valor}</td>
-                        <td>${item.quantidade}</td>
-                        <td>${item.total2Por10}</td>
-                        <td>${item.total}</td>
-                        <td>${item.data}</td>
-                        <td>${item.pagarDepois ? 'Em haver' : 'Confirmado'}</td>
-                        <td>
-                            <button onclick="gerarPDF(${JSON.stringify(item)})">Gerar PDF</button>
-                            <button onclick="removerItem(${items.indexOf(item)})">Apagar</button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                }
+            const itensFiltrados = items.filter(item => {
+                const nomeCondicao = item.nome.toLowerCase().includes(nomeFiltro);
+                const dataCondicao = dataFiltro ? item.data === new Date(dataFiltro).toLocaleDateString() : true;
+                return nomeCondicao && dataCondicao;
             });
-        }
 
-        function gerarPDF(item) {
-            const doc = new jsPDF();
-            doc.text(`Nome: ${item.nome}`, 10, 10);
-            doc.text(`Cantina: ${item.cantina}`, 10, 20);
-            doc.text(`Valor: ${item.valor}`, 10, 30);
-            doc.text(`Quantidade: ${item.quantidade}`, 10, 40);
-            doc.text(`2 por 10,00: ${item.total2Por10}`, 10, 50);
-            doc.text(`Total: ${item.total}`, 10, 60);
-            doc.text(`Data: ${item.data}`, 10, 70);
-            doc.text(`Pagamento: ${item.pagarDepois ? 'Em haver' : 'Confirmado'}`, 10, 80);
-            doc.save(`${item.nome}_extrato.pdf`);
+            itensFiltrados.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.nome}</td>
+                    <td>${item.cantina}</td>
+                    <td>${item.valor}</td>
+                    <td>${item.quantidade}</td>
+                    <td>${item.total2Por10}</td>
+                    <td>${item.total}</td>
+                    <td>${item.data}</td>
+                    <td>${item.pagarDepois ? 'Em haver' : ''}</td>
+                    <td>${item.pagarDepois ? '' : 'Pagamento Confirmado'}</td>
+                    <td>
+                        <button onclick="compartilharWhatsApp(${items.indexOf(item)})">Compartilhar</button>
+                        <button onclick="removerItem(${items.indexOf(item)})">Apagar</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
         }
     </script>
 </body>
