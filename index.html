@@ -55,20 +55,23 @@
             margin-top: 20px;
         }
         img {
-          
-              height: 100px;
+            height: 100px;
             width: 100px;
-            margin-left:35%;
+            margin-left: 35%;
             margin-top: 11px;
-             
-            
+        }
+        footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-    
-
-    
     <div class="container">
         <img src="uma.jpeg">
         
@@ -126,6 +129,7 @@
                         <th>Total</th>
                         <th>Data</th>
                         <th>Em haver</th>
+                        <th>Confirmação de Pagamento</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -137,10 +141,11 @@
 
         <button onclick="voltarParaInicio()">Voltar para o Início</button>
     </div>
-    
-    
-    
 
+    <footer>
+        <p>© 2024 Registro de Vendas. Todos os direitos reservados.</p>
+                   <p>AD Belém setor 21 Jardim Pereira<p>
+    </footer>
 
     <script>
         document.getElementById('btnVendas').addEventListener('click', function() {
@@ -199,7 +204,7 @@
             const items = JSON.parse(localStorage.getItem('items')) || [];
 
             items.forEach(item => {
-                const row = document.createElement ('tr');
+                const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${item.nome}</td>
                     <td>${item.cantina}</td>
@@ -209,8 +214,9 @@
                     <td>${item.total}</td>
                     <td>${item.data}</td>
                     <td>${item.pagarDepois ? 'Em haver' : ''}</td>
+                    <td>${item.pagarDepois ? '' : 'Pagamento Confirmado'}</td>
                     <td>
-                        <button onclick="compartilharWhatsApp(${item.total})">Compartilhar</button>
+                        <button onclick="compartilharWhatsApp(${items.indexOf(item)})">Compartilhar</button>
                         <button onclick="removerItem(${items.indexOf(item)})">Apagar</button>
                     </td>
                 `;
@@ -218,14 +224,46 @@
             });
         }
 
-        function compartilharWhatsApp(total) {
-            const mensagem = `Total da venda: ${total}`;
-            const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`;
-            window.open(url, '_blank');
+        async function gerarPDF(item) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.text("Registro de Venda", 20, 20);
+            doc.text(`Nome: ${item.nome}`, 20, 30);
+            doc.text(`Cantina: ${item.cantina}`, 20, 40);
+            doc.text(`Valor: ${item.valor}`, 20, 50);
+            doc.text(`Quantidade: ${item.quantidade}`, 20, 60);
+            doc.text(`2 por 10,00: ${item.total2Por10}`, 20, 70);
+            doc.text(`Total: ${item.total}`, 20, 80);
+            doc.text(`Data: ${item.data}`, 20, 90);
+            doc.text(`Em haver: ${item.pagarDepois ? 'Sim' : 'Não'}`, 20, 100);
+            doc.text(`Pagamento Confirmado: ${item.pagarDepois ? 'Não' : 'Sim'}`, 20, 110);
+
+            const pdfData = doc.output('blob');
+
+            return pdfData;
+        }
+
+        async function compartilharWhatsApp(index) {
+            const items = JSON.parse(localStorage.getItem('items')) || [];
+            const item = items[index];
+
+            const pdfData = await gerarPDF(item);
+            const pdfUrl = URL.createObjectURL(pdfData);
+
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            link.download = `${item.nome}_venda.pdf`;
+            link.click();
+
+            const whatsappMessage = `Confira a venda do item ${item.nome}: `;
+            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappMessage)}&attachment=${encodeURIComponent(pdfUrl)}`;
+
+            window.open(whatsappUrl, '_blank');
         }
 
         function removerItem(index) {
-            let items = JSON.parse(localStorage.getItem('items'))
+            let items = JSON.parse(localStorage.getItem('items')) || [];
             items.splice(index, 1);
             localStorage.setItem('items', JSON.stringify(items));
             carregarItens();
@@ -239,35 +277,36 @@
         function filtrarItens() {
             const nomeFiltro = document.getElementById('nomeFiltro').value.toLowerCase();
             const dataFiltro = document.getElementById('dataFiltro').value;
-
             const items = JSON.parse(localStorage.getItem('items')) || [];
-
             const tbody = document.getElementById('consultaTable').querySelector('tbody');
             tbody.innerHTML = '';
 
-            items.forEach(item => {
-                if (item.nome.toLowerCase().includes(nomeFiltro) && (!dataFiltro || item.data === dataFiltro)) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${item.nome}</td>
-                        <td>${item.cantina}</td>
-                        <td>${item.valor}</td>
-                        <td>${item.quantidade}</td>
-                        <td>${item.total2Por10}</td>
-                        <td>${item.total}</td>
-                        <td>${item.data}</td>
-                        <td>${item.pagarDepois ? 'Em haver' : ''}</td>
-                        <td>
-                            <button onclick="compartilharWhatsApp(${item.total})">Compartilhar</button>
-                            <button onclick="removerItem(${items.indexOf(item)})">Apagar</button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                }
+            const itensFiltrados = items.filter(item => {
+                const nomeCondicao = item.nome.toLowerCase().includes(nomeFiltro);
+                const dataCondicao = dataFiltro ? item.data === new Date(dataFiltro).toLocaleDateString() : true;
+                return nomeCondicao && dataCondicao;
+            });
+
+            itensFiltrados.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.nome}</td>
+                    <td>${item.cantina}</td>
+                    <td>${item.valor}</td>
+                    <td>${item.quantidade}</td>
+                    <td>${item.total2Por10}</td>
+                    <td>${item.total}</td>
+                    <td>${item.data}</td>
+                    <td>${item.pagarDepois ? 'Em haver' : ''}</td>
+                    <td>${item.pagarDepois ? '' : 'Pagamento Confirmado'}</td>
+                    <td>
+                        <button onclick="compartilharWhatsApp(${items.indexOf(item)})">Compartilhar</button>
+                        <button onclick="removerItem(${items.indexOf(item)})">Apagar</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
             });
         }
     </script>
-    
 </body>
 </html>
-
