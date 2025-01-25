@@ -1,0 +1,130 @@
+/* Resetando estilos padrões */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Corpo da página */
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    display: flex;
+    background-image: url(capa.jpg);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-size: cover; /* A imagem cobre toda a tela */
+    background-position: center center; /* A imagem fica centralizada */
+}
+
+
+/* Container principal */
+.wrapper {
+    display: flex;
+    width: 100%;
+}
+
+/* Menu lateral */
+.sidebar {
+    background-color: #333;
+    color: white;
+    width: 250px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: -250px;
+    transition: left 0.3s;
+    padding-top: 20px;
+}
+
+.sidebar.open {
+    left: 0;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    margin: 15px 0;
+}
+
+.sidebar ul li a {
+    color: white;
+    text-decoration: none;
+    font-size: 1.2em;
+    padding: 10px 20px;
+    display: block;
+}
+
+.sidebar ul li a:hover {
+    background-color: #444;
+}
+
+/* Estilos para o conteúdo principal */
+main {
+    margin-left: 250px;
+    padding: 20px;
+    width: 100%;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.menu-btn {
+    font-size: 1.5em;
+    background-color: transparent;
+    border: none;
+    color: #333;
+    cursor: pointer;
+}
+
+/* Título e conteúdo */
+h1 {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+}
+
+.content p {
+    font-size: 1.2em;
+    margin-bottom: 30px;
+}
+
+/* Rodapé */
+footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 15px 0;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+    .wrapper {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        left: -250px;
+        width: 200px;
+    }
+
+    .sidebar.open {
+        left: 0;
+    }
+
+    main {
+        margin-left: 0;
+    }
+
+    .menu-btn {
+        display: block;
+    }
+}
